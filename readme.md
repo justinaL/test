@@ -1,1 +1,3 @@
-It's a test project
+It's a test project.
+
+Try git and other stuff.
