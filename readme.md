@@ -1,3 +1,5 @@
-It's a test project.
+Test Project
+====
 
+It's a test project.
 Try git and other stuff.
