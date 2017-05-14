@@ -9,9 +9,13 @@ const nightmare = Nightmare({
   show: true,
 });
 
+
+
 function getListingDetails() {
   return nightmare
-    .goto('http://en.midland.com.hk/find-property-detail/天晉2期3B座高層B室-將軍澳站-NT295368?_ga=2.263459468.1035400097.1494567002-164314101.1494566995')
+    .goto(//'http://en.midland.com.hk/find-property-detail/Flat%20E-High%20Floor-Tower%2009-Villa%20Verde-Laguna%20Verde-Hung%20Hom-Whampoa-KL165269') // with view
+          'http://en.midland.com.hk/find-property-detail/High%20Floor-Block%202-May%20Tower-Central%20Mid-Levels%20&%20Admiralty-HK65210')
+          //'http://en.midland.com.hk/find-property-detail/天晉2期3B座高層B室-將軍澳站-NT295368?_ga=2.263459468.1035400097.1494567002-164314101.1494566995') // without view
     .evaluate(() => {
       const stockInfo = $('.desktop-content:nth-child(1) .label-group')
         .map((idx, elem) => $(elem).text().trim())
@@ -19,7 +23,12 @@ function getListingDetails() {
         .reduce((obj, string) => {
           const key = string.split(':')[0].trim();
           obj[key] = string.split(':')[1].trim();
-          return obj;
+          if (obj.hasOwnProperty('View')){
+            return obj['View'];
+          }
+          else {
+            return obj;
+          }
         }, {});
 
       return {
