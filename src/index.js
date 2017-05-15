@@ -31,7 +31,7 @@ function getListingEngDetails(url) {
       const lat = $('#sect-map a').attr('href').split(",")[1].split("&")[0];
       const result = {
         stockInfo,
-        saleableArea: $('#stockEstateInfo .net_area').text().match(/([0-9]{1,3}(,[0-9]{3})*(\.[0-9]+)?|\.[0-9]+)/)[1],
+        netArea: $('#stockEstateInfo .net_area').text().match(/([0-9]{1,3}(,[0-9]{3})*(\.[0-9]+)?|\.[0-9]+)/)[1],
         grossArea: $('#stockEstateInfo .area').text().match(/([0-9]{1,3}(,[0-9]{3})*(\.[0-9]+)?|\.[0-9]+)/)[1],
         buildingUrl: $('#stockEstateInfo .custom-btn').first().attr('href'),
         bedrooms: $('.desktop-content:nth-child(1) .label-group:nth-child(4) p').text().match(/(\d+) room/)[1],
@@ -41,10 +41,10 @@ function getListingEngDetails(url) {
         name: {
           en: $('.big-title').text().split('Saleable')[0],
         },
-        district: $('#stockDetailWrapper .inner p').text().split("(")[0],
-        //img: $('[rel="propertyPhotos"]').map((idx, elem) => $(elem).attr('data-fancybox-href')).get(),
+        district: $('#stockDetailWrapper .inner p').text().split("(")[0].trim(),
+        images: $('[rel="propertyPhotos"]').map((idx, elem) => $(elem).attr('data-fancybox-href')).get(),
         addressURL: $('#sect-map a').attr('href'),
-        coordinates: lat + ", " + long,
+        coordinates: [lat + ", " + long],
       };
 
       const rentElem = $('#stockDetailWrapper .rent-color');
@@ -58,10 +58,10 @@ function getListingEngDetails(url) {
 
       }
 
-      /*const priceElem = $('.nowrap');
+      const priceElem = $('.nowrap');
       if (priceElem.length) {
         result.price = priceElem.text().match(/\)(.*)/)[1];
-      }*/
+      }
 
       if (stockInfo.hasOwnProperty('Description') && stockInfo.hasOwnProperty('View')){
         result.stockInfo = "Description: " + stockInfo['Description'] + " View: " + stockInfo['View'];
@@ -82,7 +82,7 @@ function getListingEngDetails(url) {
     .end()
     .then((result) => {
       result.grossArea = parseInt(result.grossArea);
-      result.saleableArea = parseInt(result.saleableArea);
+      result.netArea = parseInt(result.netArea);
       result.bedrooms = parseInt(result.bedrooms);
       result.sittingRoom = parseInt(result.sittingRoom);
       
@@ -139,5 +139,3 @@ urls.reduce((promise, url) => {
     .then(() => getListingDetails(url))
     .then((result) => console.log('result', result));
 }, Promise.resolve());
-
-
