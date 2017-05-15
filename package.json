@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/justinaL/test#readme",
   "dependencies": {
-    "nightmare": "^2.10.0"
+    "nightmare": "^2.10.0",
+    "numeral": "^2.0.6"
   }
 }
