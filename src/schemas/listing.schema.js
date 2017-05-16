@@ -1,4 +1,6 @@
-const ListingSchema = BaseSchema.extend({
+const mongoose = require('mongoose');
+
+const ListingSchema = new mongoose.Schema({
   type: {
     type: String,
     enum: [
@@ -82,3 +84,5 @@ const ListingSchema = BaseSchema.extend({
   closed: Boolean,
   sourceRefId: String,
 });
+
+module.exports = ListingSchema;

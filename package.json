@@ -17,6 +17,10 @@
   },
   "homepage": "https://github.com/justinaL/test#readme",
   "dependencies": {
+    "mongoose": "4.9.2",
+    "mongoose-geojson-schema": "^2.1.2",
+    "mongoose-intl": "^2.0.1",
+    "mongoose-schema-extend": "^0.2.2",
     "nightmare": "^2.10.0",
     "numeral": "^2.0.6"
   }

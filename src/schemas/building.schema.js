@@ -1,4 +1,7 @@
-const BuildingSchema = BaseSchema.extend({
+const mongoose = require('mongoose');
+require('mongoose-geojson-schema');
+
+const BuildingSchema = new mongoose.Schema({
   name: {
     type: String,
     intl: true,
@@ -10,6 +13,7 @@ const BuildingSchema = BaseSchema.extend({
   location: mongoose.Schema.Types.Point,
 });
 
+module.exports = BuildingSchema;
 
 // {
 //   name: {
