@@ -4,9 +4,15 @@ const numeral = require('numeral');
 const engDomain = 'http://en.midland.com.hk';
 const chiDomain = 'http://www.midland.com.hk';
 
+Nightmare.action('clearCache', (name, options, parent, win, renderer, done) => {
+  parent.respondTo('clearCache', done => win.webContents.session.clearCache(done));
+  done();
+});
+
 function getListingEngDetails(url) {
   const nightmare = Nightmare({
     waitTimeout: 60000,
+    show: true,
   });
 
   return nightmare
@@ -97,7 +103,9 @@ function getListingEngDetails(url) {
 }
 
 function getListingChineseDetails(url) {
-  const nightmare = Nightmare();
+  const nightmare = Nightmare({
+    show: true,
+  });
 
   return nightmare
     .goto(`${chiDomain}/${url}`)
