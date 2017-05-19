@@ -1,22 +1,87 @@
 const Nightmare = require('nightmare');
 const numeral = require('numeral');
+const mongoose = require('mongoose');
+const Listing = mongoose.model('Listing');
+const Building = mongoose.model('Building');
 
-const engDomain = 'http://en.midland.com.hk';
-const chiDomain = 'http://www.midland.com.hk';
+function createBuilding({ name, location }) {
+  return Building
+    .findOneAndUpdate({
+      'name.en': name.en,
+    }, {
+      $setOnInsert: {
+        name,
+      },
+      location: {
+        type: 'Point',
+        coordinates: location,
+      },
+    }, {
+      upsert: true, new: true, setDefaultsOnInsert: true,
+    });
+}
 
-Nightmare.action('clearCache', (name, options, parent, win, renderer, done) => {
-  parent.respondTo('clearCache', done => win.webContents.session.clearCache(done));
-  done();
-});
+function updateListing(listing, {
+  name,
+  location,
+  netArea,
+  grossArea,
+  stockInfo,
+  sittingRoom,
+  bedrooms,
+  sourceRefId,
+  images,
+  type,
+  rent,
+  price,
+  parkings,
+  roofTop,
+  views,
+  closed,
+}) {
+  return createBuilding({ name, location })
+    .then((building) => {
+      if (listing.type === 'rent') {
+        listing.price = rent;
+      } else {
+        listing.price = price;
+      }
+
+      listing.location = location;
+      listing.netArea = netArea;
+      listing.grossArea = grossArea;
+      listing.sourceRefId = sourceRefId;
+      listing.images = images;
+      listing.parkings = parkings;
+      listing.closed = closed;
+      listing.building = building;
+      listing.views = views;
+      listing.bedrooms = bedrooms;
+      listing.roofTop = roofTop;
+
+      return listing.save();    
+    })
+    .catch(error => console.error('updateListing error', error));
+}
+
+function updateBuilding (building, {name, location}) {
+   building.name = name;
+   building.location = location;
+
+   return building.save();
+}
+
+const engDomain = 'https://en.midland.com.hk';
+const chiDomain = 'https://www.midland.com.hk';
 
 function getListingEngDetails(url) {
   const nightmare = Nightmare({
-    waitTimeout: 60000,
+    gotoTimeout: 60000,
     show: true,
   });
 
   return nightmare
-    .goto(`${engDomain}/${url}`)
+    .goto(`${engDomain}${url}`)
     .wait('#sect-map a')
     .evaluate(() => {
       const stockInfo = $('.desktop-content:nth-child(1) .label-group')
@@ -28,50 +93,64 @@ function getListingEngDetails(url) {
           return obj;
         }, {});
 
-      const long = $('#sect-map a').attr('href').split(",")[0].split("=")[1];
-      const lat = $('#sect-map a').attr('href').split(",")[1].split("&")[0];
+      const long = parseFloat($('#sect-map a').attr('href').split(",")[0].split("=")[1]);
+      const lat = parseFloat($('#sect-map a').attr('href').split(",")[1].split("&")[0]);
+
       const result = {
         stockInfo,
-        netArea: $('#stockEstateInfo .net_area').text().match(/([0-9]{1,3}(,[0-9]{3})*(\.[0-9]+)?|\.[0-9]+)/)[1],
-        grossArea: $('#stockEstateInfo .area').text().match(/([0-9]{1,3}(,[0-9]{3})*(\.[0-9]+)?|\.[0-9]+)/)[1],
-        buildingUrl: $('#stockEstateInfo .custom-btn').first().attr('href'),
-        bedrooms: $('.desktop-content:nth-child(1) .label-group:nth-child(4) p').text().match(/(\d+) room/)[1],
-        sittingRoom: $('.desktop-content:nth-child(1) .label-group:nth-child(4) p').text().substring(1).match(/\d+/)[0],
         source: 'midland',
         sourceRefId: $('#stockDetailWrapper .inner p').text().split(": ")[1].slice(0, -1),
         name: {
           en: $('.big-title').text().split('Saleable')[0],
         },
-        district: $('#stockDetailWrapper .inner p').text().split("(")[0].trim(),
-        images: $('[rel="propertyPhotos"]').map((idx, elem) => $(elem).attr('data-fancybox-href')).get(),
-        addressURL: $('#sect-map a').attr('href'),
-        coordinates: [lat + ", " + long],
+        images: $('[rel="propertyPhotos"]').map((idx, elem) => `https:${$(elem).attr('data-fancybox-href')}`).get(),
+        location: [lat, long],
       };
 
       const rentElem = $('#stockDetailWrapper .rent-color');
       if (rentElem.length) {
-        if (rentElem.text().indexOf(":") >= 0) {
-          result.rent = rentElem.text().match(/\:(.*)/)[1];
-        }
-        else{
           result.rent = rentElem.text().match(/\)(.*)/)[1];
         }
 
-      }
-
-      const priceElem = $('.nowrap');
+      const priceElem = $('.nowrap').text();
       if (priceElem.length) {
-        result.price = priceElem.text().match(/\)(.*)/)[1];
+        result.price = priceElem.match(/\)(.*)/)[1];
       }
 
-      if (stockInfo.hasOwnProperty('Description') && stockInfo.hasOwnProperty('View')){
-        result.stockInfo = "Description: " + stockInfo['Description'] + " View: " + stockInfo['View'];
+      const netArea = $('#stockEstateInfo .net_area').text();
+      if(netArea.length) {
+        result.netArea = netArea.match(/([0-9]{1,3}(,[0-9]{3})*(\.[0-9]+)?|\.[0-9]+)/)[1];
       }
-      else if (stockInfo.hasOwnProperty('View') && stockInfo.hasOwnProperty('Description') == false) {
-        result.stockInfo = "View: " + stockInfo['View'];
+
+      const sittingRoom = $('.desktop-content:nth-child(1) .label-group:nth-child(4) p').text();
+      if (sittingRoom.indexOf('sitting') != -1){
+        result.sittingRoom = sittingRoom.match(/(\d+) sitting/)[1];
       }
-      else {
-        result.stockInfo = "Orientation: " + stockInfo['Orientation'];
+
+      const bedrooms = $('.desktop-content:nth-child(1) .label-group:nth-child(4) p').text();
+      if (bedrooms.indexOf('room') != -1) {
+        result.bedrooms = bedrooms.match(/(\d+) room/)[1];
+      }
+
+      const grossArea = $('#stockEstateInfo .area').text();
+      if (grossArea.length) {
+        result.grossArea = grossArea.match(/([0-9]{1,3}(,[0-9]{3})*(\.[0-9]+)?|\.[0-9]+)/)[1];
+      }
+
+      if (stockInfo['Description']) {
+        const parkings = stockInfo['Description'].match(/(\d+) Covered/);
+        if(parkings && parkings.length) {
+          result.parkings = parkings[1];
+        }
+        const roofTop = stockInfo['Description'].match(/roof top/);
+        if (roofTop && roofTop.length){
+          result.roofTop = true;
+        }
+      }
+
+      const viewsElem = ['garden', 'sea', 'mountain', 'city', 'racecourse', 'building', 'open'];
+      if (stockInfo['View']){
+        result.views = viewsElem.filter(view => !!stockInfo['View'].match(new RegExp(view, 'i')));
       }
 
       $('.big-title .btnPrice').remove();
@@ -82,24 +161,12 @@ function getListingEngDetails(url) {
     })
     .end()
     .then((result) => {
-      result.grossArea = parseInt(result.grossArea);
-      result.netArea = parseInt(result.netArea);
-      result.bedrooms = parseInt(result.bedrooms);
-      result.sittingRoom = parseInt(result.sittingRoom);
-      
-      if (result.price) {
-        result.price = numeral(result.price.toLowerCase()).value();
-      }
-
-      if (result.rent) {
-        result.rent = numeral(result.rent).value();
-      }
-      
-      return result;
-     })
-    .catch((error) => {
-      console.error('error happened', error);
-    });
+      ['grossArea', 'netArea', 'bedrooms', 'sittingRoom', 'price', 'rent', 'parkings']
+        .forEach((key) => {
+          if (result[key]) result[key] = numeral(result[key].toLowerCase()).value();
+        });
+      return result; 
+     });
 }
 
 function getListingChineseDetails(url) {
@@ -108,11 +175,19 @@ function getListingChineseDetails(url) {
   });
 
   return nightmare
-    .goto(`${chiDomain}/${url}`)
+    .goto(`${chiDomain}${url}`)
+    .wait(() => {
+      return $('.big-title').length || $('#content td').text().trim() === '沒有樓盤資料';
+    })
     .evaluate(() => {
       $('.big-title .btnPrice').remove();
 
-      return $('.big-title').text();
+      let closed = false;
+      if ($('#content td').text().trim() === '沒有樓盤資料' || $('.selectorgadget_selected') == null) {
+        closed = true;
+      }
+
+      return { name: $('.big-title').text(), closed };
     })
     .end();
 }
@@ -124,23 +199,35 @@ function getListingDetails(url) {
   ])
     .then(([engResult, chiResult]) => {
       const result = Object.assign({}, engResult);
-      result.name.zh = chiResult;
+
+      if (result.name) {
+        result.name.zh = chiResult.name;
+      }
 
       return result;
-    })
-    .catch(error => console.error(error));
+    });
 }
 
-// const urls = [
-//   'find-property-detail/Flat%20E-High%20Floor-Tower%2009-Villa%20Verde-Laguna%20Verde-Hung%20Hom-Whampoa-KL165269', // with view
-//   'find-property-detail/天晉2期3B座高層B室-將軍澳站-NT295368?_ga=2.263459468.1035400097.1494567002-164314101.1494566995', // without view
-//   'find-property-detail/High%20Floor-Block%202-May%20Tower-Central%20Mid-Levels%20&%20Admiralty-HK65210',
-// ];
+function getAllListingDetails() {
+  return Listing
+    .find({
+      closed: false,
+    })
+    .sort({
+      updatedAt: 1,
+    })
+    .then((listings) => {
+      return listings.reduce((promise, listing) => {
+        return promise
+          .then(() => getListingDetails(listing.sourceUrl))
+          .then((result) => updateListing(listing, result))
+          .catch((error) => {
+            listing.closed = true;
 
-// urls.reduce((promise, url) => {
-//   return promise
-//     .then(() => getListingDetails(url))
-//     .then((result) => console.log('result', result));
-// }, Promise.resolve());
+            return listing.save();
+          });
+      }, Promise.resolve());
+    });
+}
 
-module.exports = getListingDetails;
+module.exports = getAllListingDetails;

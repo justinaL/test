@@ -83,6 +83,8 @@ const ListingSchema = new mongoose.Schema({
   }],
   closed: Boolean,
   sourceRefId: String,
+}, {
+  timestamps: true,
 });
 
 module.exports = ListingSchema;

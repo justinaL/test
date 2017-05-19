@@ -11,6 +11,8 @@ const BuildingSchema = new mongoose.Schema({
     ref: 'District',
   },
   location: mongoose.Schema.Types.Point,
+}, {
+  timestamps: true,
 });
 
 module.exports = BuildingSchema;

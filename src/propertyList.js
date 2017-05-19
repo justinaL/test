@@ -4,14 +4,13 @@ const mongoose = require('mongoose');
 const Listing = mongoose.model('Listing');
 
 function createListing({ type, url }) {
-  console.log('url? ', url);
   return Listing
     .findOneAndUpdate({
       type,
       sourceUrl: url,
     }, {
       $setOnInsert: {
-        sourceUrl: url,
+        name: url,
         source: 'midland',
         type,
       },
@@ -50,7 +49,7 @@ function getLinksPerPage(nightmare) {
           } else if ($elem.find('span.sell').length) {
             type = 'buy';
           }
-          return { type, url: elem.href };
+          return { type, url: $elem.attr('') };
         }).get()
     )
     .then((urls) => {
@@ -61,11 +60,8 @@ function getLinksPerPage(nightmare) {
       return nightmare
         .evaluate(() => $('#pagination :not(.prev).disabled + li').hasClass('disabled'));
       // evaluate nightmare to see if there's a valid next page button.
-      // return { urls, nextPageDisabled: $('#pagination :not(.prev).disabled + li').hasClass('disabled') };
     })
     .then((nextPageDisabled) => {
-      console.log('disabled? ', nextPageDisabled);
-      // return result;
       if (!nextPageDisabled) {
         return nightmare.wait(2000).click('#pagination :not(.prev).disabled + li')
           .then(() => getLinksPerPage(nightmare));
@@ -78,12 +74,9 @@ function getLinksPerPage(nightmare) {
 function getListingLinks () {
   const nightmare = Nightmare({
     show: true,
-    // waitTimeout: 60000,
-    // gotoTimeout: 60000,
-    // openDevTools: true,
   });
   return nightmare
-    .goto('http://en.midland.com.hk/find-property/#list')
+    .goto('https://en.midland.com.hk/find-property/#list')
     .then(() => getLinksPerPage(nightmare))
     .catch(error => {
       console.error('getListingLinks error', error);

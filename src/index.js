@@ -11,10 +11,11 @@ mongoose.connect('mongodb://localhost:27017/test');
 
 mongoose.plugin(mongooseIntl, { languages: ['en', 'zh'], defaultLanguage: 'en' });
 
-mongoose.model('Building', BuildingSchema);
 mongoose.model('Listing', ListingSchema);
+mongoose.model('Building', BuildingSchema);
 
 const getListingLinks = require('./propertyList');
 const getListingDetails = require('./propertyDetails');
-getListingLinks();
-// getListingDetails('https://en.midland.com.hk/find-property-detail/Flat%20E-High%20Floor-Tower%2007-The%20Reach-Yuen%20Long%20%20Kam%20Tin-NT304802');
+const getBuildingDetails = require('./propertyDetails');
+getListingLinks()
+  .then(getListingDetails);
